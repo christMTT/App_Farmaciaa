@@ -1,0 +1,34 @@
+﻿<Window x:Class="App_Farmacia.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:App_Farmacia"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="137*"/>
+            <ColumnDefinition Width="463*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Background="#FF29B158" OpacityMask="Black">
+            <TextBlock Text="FARMACIA" Foreground="White" FontSize="20" Margin="0,30,0,30" 
+                   HorizontalAlignment="Center" FontWeight="Bold"/>
+
+            <Button Content="Stock" Margin="10,5" Height="35" Click="BtnInventario_Click"/>
+            <Button Content="Clientes" Margin="10,5" Height="35" Click="BtnClientes_Click"/>
+            <Button Content="Ventas" Margin="10,5" Height="35" Click="BtnVentas_Click"/>
+
+            <Button x:Name="BtnReportes" Content="Reportes" Margin="10,5" Height="35" 
+                Click="BtnReportes_Click" Background="#34495E" Foreground="White"/>
+
+            <Separator Margin="10,20" Background="Gray"/>
+            <TextBlock x:Name="TxtStatus" Text="" Foreground="LightGray" 
+                   HorizontalAlignment="Center" FontSize="12"/>
+        </StackPanel>
+
+        <Frame x:Name="MainFrame" Grid.Column="1" NavigationUIVisibility="Hidden" Margin="15,15,15,15" Grid.ColumnSpan="2"/>
+    </Grid>
+</Window>

@@ -1,0 +1,44 @@
+﻿<Page x:Class="App_Farmacia.PaginaReportes"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Reportes y Estadísticas" Background="#F4F7F6">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBlock Text="PANEL DE REPORTES" FontSize="26" FontWeight="Bold" Foreground="#2C3E50"/>
+            <Button Content="Actualizar Datos" Margin="30,0,0,0" Width="150" Height="35" 
+                    Background="#3498DB" Foreground="White" Click="BtnActualizar_Click"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Top 10 Productos Más Vendidos" Margin="0,0,5,0">
+                <DataGrid x:Name="dgTopProductos" AutoGenerateColumns="True" IsReadOnly="True"/>
+            </GroupBox>
+
+            <GroupBox Header="Total por Sucursal" Grid.Column="1" Margin="5,0,0,0">
+                <DataGrid x:Name="dgTotalSucursales" AutoGenerateColumns="True" IsReadOnly="True"/>
+            </GroupBox>
+        </Grid>
+
+        <GroupBox Header="Ventas Realizadas Hoy" Grid.Row="2">
+            <DataGrid x:Name="dgVentasDia" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Vendedor" Binding="{Binding Vendedor}" Width="*"/>
+                    <DataGridTextColumn Header="Sucursal" Binding="{Binding Sucursal}" Width="*"/>
+                    <DataGridTextColumn Header="Hora" Binding="{Binding Fecha, StringFormat=\{0:HH:mm\}}" Width="100"/>
+                    <DataGridTextColumn Header="Monto" Binding="{Binding Total, StringFormat=C}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+    </Grid>
+</Page>

@@ -1,0 +1,66 @@
+﻿<Page x:Class="App_Farmacia.PaginaStock"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Gestión de Inventario" Background="White">
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
+
+        <GroupBox Header="Inventario en Sucursal Actual" Margin="0,0,10,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="Buscar:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox x:Name="txtBusqueda" Width="200" Height="25" KeyUp="txtBusqueda_KeyUp"/>
+                </StackPanel>
+                <DataGrid x:Name="dgStock" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="dgStock_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding ID_Producto}" Width="50"/>
+                        <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}" Width="*"/>
+                        <DataGridTextColumn Header="Precio" Binding="{Binding Precio, StringFormat=C}"/>
+                        <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="80"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </GroupBox>
+
+        <StackPanel Grid.Column="1">
+            <GroupBox Header="Nuevo Producto / Reabastecer">
+                <Border Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Nombre:"/>
+                        <TextBox x:Name="txtNombre" Margin="0,5"/>
+
+                        <TextBlock Text="Categoría:"/>
+                        <ComboBox x:Name="cbCategoria" Margin="0,5" 
+                                  DisplayMemberPath="Nombre" 
+                                  SelectedValuePath="ID_Categoria"/>
+
+                        <TextBlock Text="Presentación:"/>
+                        <TextBox x:Name="txtPresentacion" Margin="0,5"/>
+
+                        <TextBlock Text="Precio:"/>
+                        <TextBox x:Name="txtPrecio" Margin="0,5" Text="0.00"/>
+
+                        <TextBlock Text="Cantidad (Stock):" FontWeight="Bold" Foreground="#2C3E50"/>
+                        <TextBox x:Name="txtCantidad" Margin="0,5" Text="0"/>
+
+                        <UniformGrid Columns="1" Margin="0,10,0,0">
+                            <Button Content="CREAR NUEVO" Click="BtnCrear_Click" 
+                                    Background="#29B158" Foreground="White" 
+                                    Height="35" Margin="0,5" FontWeight="Bold"/>
+
+                            <Button Content="AÑADIR A EXISTENTE" Click="BtnActualizar_Click" 
+                                    Background="#2980B9" Foreground="White" 
+                                    Height="35" Margin="0,5" FontWeight="Bold"/>
+                        </UniformGrid>
+
+                        <TextBlock Text="* Seleccione un producto de la tabla para reabastecer stock." 
+                                   TextWrapping="Wrap" FontSize="10" Foreground="Gray" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </GroupBox>
+        </StackPanel>
+    </Grid>
+</Page>

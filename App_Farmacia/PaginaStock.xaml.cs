@@ -1,0 +1,167 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using Microsoft.Data.SqlClient;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace App_Farmacia
+{
+    public partial class PaginaStock : Page
+    {
+        private int idSeleccionado = 0;
+
+        public PaginaStock()
+        {
+            InitializeComponent();
+            CargarTabla();
+            CargarCategorias(); // Cargamos las categorías al iniciar
+        }
+
+        // 1. CARGAR CATEGORÍAS EN EL COMBOBOX
+        private void CargarCategorias()
+        {
+            using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+            {
+                try
+                {
+                    // Ajusta el nombre de la tabla/columnas si son distintos en tu BD
+                    string sql = "SELECT ID_Categoria, Nombre FROM Categoria";
+                    SqlDataAdapter da = new SqlDataAdapter(sql, con);
+                    DataTable dt = new DataTable();
+                    da.Fill(dt);
+
+                    cbCategoria.ItemsSource = dt.DefaultView;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al cargar categorías: " + ex.Message);
+                }
+            }
+        }
+
+        private void CargarTabla(string nombre = "")
+        {
+            using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+            {
+                try
+                {
+                    SqlCommand cmd = new SqlCommand("sp_BuscarProducto", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@nombre", nombre);
+                    cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    DataTable dt = new DataTable();
+                    da.Fill(dt);
+                    dgStock.ItemsSource = dt.DefaultView;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al cargar tabla: " + ex.Message);
+                }
+            }
+        }
+
+        private void txtBusqueda_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            CargarTabla(txtBusqueda.Text);
+        }
+
+        // 2. CREAR PRODUCTO (ACTUALIZADO CON CATEGORÍA)
+        private void BtnCrear_Click(object sender, RoutedEventArgs e)
+        {
+            if (cbCategoria.SelectedValue == null)
+            {
+                MessageBox.Show("Debe seleccionar una categoría para el producto.");
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("sp_CrearProducto", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@Nombre", txtNombre.Text);
+                    cmd.Parameters.AddWithValue("@Presentacion", txtPresentacion.Text);
+                    cmd.Parameters.AddWithValue("@Precio", decimal.Parse(txtPrecio.Text));
+                    cmd.Parameters.AddWithValue("@Stock", int.Parse(txtCantidad.Text));
+                    cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
+
+                    // PASAMOS EL ID DE LA CATEGORÍA SELECCIONADA
+                    cmd.Parameters.AddWithValue("@idCategoria", cbCategoria.SelectedValue);
+
+                    cmd.ExecuteNonQuery();
+                    MessageBox.Show("Producto creado y asignado a sucursal.");
+
+                    CargarTabla();
+                    LimpiarCampos();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error en SQL: " + ex.Message);
+            }
+        }
+
+        private void BtnActualizar_Click(object sender, RoutedEventArgs e)
+        {
+            if (idSeleccionado == 0) { MessageBox.Show("Seleccione un producto de la tabla"); return; }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("sp_ActualizarStock", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@idProducto", idSeleccionado);
+                    cmd.Parameters.AddWithValue("@Nombre", txtNombre.Text);
+                    cmd.Parameters.AddWithValue("@NuevaCantidad", int.Parse(txtCantidad.Text));
+                    cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
+
+                    cmd.ExecuteNonQuery();
+                    MessageBox.Show("Stock actualizado exitosamente.");
+                    CargarTabla();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al actualizar: " + ex.Message);
+            }
+        }
+
+        private void dgStock_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dgStock.SelectedItem is DataRowView fila)
+            {
+                idSeleccionado = (int)fila["ID_Producto"];
+                txtNombre.Text = fila["Nombre"].ToString();
+                txtPrecio.Text = fila["Precio"].ToString();
+                // Opcional: Si la vista devuelve ID_Categoria, puedes seleccionarlo en el combo
+            }
+        }
+
+        private void LimpiarCampos()
+        {
+            idSeleccionado = 0;
+            txtNombre.Clear();
+            txtPresentacion.Clear();
+            txtPrecio.Text = "0.00";
+            txtCantidad.Text = "0";
+            cbCategoria.SelectedIndex = -1; // Limpia la selección del combo
+        }
+    }
+}

@@ -1,0 +1,26 @@
+﻿<Window x:Class="App_Farmacia.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:App_Farmacia"
+        mc:Ignorable="d"
+        Title="LoginWindow" Height="450" Width="800">
+    <StackPanel Margin="30" VerticalAlignment="Center">
+        <TextBlock Text="INICIO DE SESIÓN" FontSize="20" FontWeight="Bold" 
+                   HorizontalAlignment="Center" Margin="0,0,0,20" Foreground="#29B158"/>
+
+        <TextBlock Text="Usuario:"/>
+        <TextBox x:Name="txtUsuario" Margin="0,5,0,10" Height="25"/>
+
+        <TextBlock Text="Contraseña:"/>
+        <PasswordBox x:Name="txtPassword" Margin="0,5,0,10" Height="25"/>
+
+        <TextBlock Text="Sucursal:"/>
+        <ComboBox x:Name="cbSucursal" Margin="0,5,0,20" Height="25" 
+                  DisplayMemberPath="Nombre" SelectedValuePath="ID_Sucursal"/>
+
+        <Button Content="Entrar" Click="BtnLogin_Click" Height="35" 
+                Background="#29B158" Foreground="White" FontWeight="Bold"/>
+    </StackPanel>
+</Window>

@@ -1,0 +1,93 @@
+﻿<Page x:Class="App_Farmacia.PaginaVentas"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Punto de Venta" Background="White">
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+            <TextBlock Text="NRO DE DOCUMENTO" FontWeight="Bold" Foreground="#2980B9" Margin="0,0,0,5"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="txtDniCliente" Height="30" VerticalContentAlignment="Center"
+                         ToolTip="Ingrese Nro Documento del Cliente"/>
+                <Button Grid.Column="1" Content="✓" Width="30" Margin="5,0,0,0"
+                        Background="#3498DB" Foreground="White" Click="btnValidarCliente_Click"/>
+            </Grid>
+            <TextBlock x:Name="lblNombreCliente" Text="Cliente: No registrado"
+                       FontStyle="Italic" Foreground="Gray" Margin="0,0,0,15"/>
+
+            <Separator Margin="0,5"/>
+
+            <TextBlock Text="BUSCAR PRODUCTO" FontWeight="Bold" Margin="0,0,0,10"/>
+            <TextBox x:Name="txtBusqueda" Height="30" VerticalContentAlignment="Center"
+                     Margin="0,0,0,5" KeyUp="txtBusqueda_KeyUp"/>
+
+            <DataGrid x:Name="dgBusqueda" Height="150" AutoGenerateColumns="False"
+                      IsReadOnly="True" SelectionChanged="dgBusqueda_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}" Width="*"/>
+                    <DataGridTextColumn Header="Precio" Binding="{Binding Precio, StringFormat=C}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Separator Margin="0,15"/>
+            <TextBlock Text="CANTIDAD A VENDER:" Margin="0,5"/>
+            <TextBox x:Name="txtCantidad" Text="1" Height="30" FontSize="16"
+                     FontWeight="Bold" HorizontalContentAlignment="Center"/>
+            <Button x:Name="btnAgregar" Content="Añadir" Margin="0,10" Height="40"
+                    Background="#29B158" Foreground="White" Click="btnAgregar_Click"/>
+        </StackPanel>
+
+        <DockPanel Grid.Column="1">
+            <TextBlock DockPanel.Dock="Top" Text="DETALLE DE VENTA" FontWeight="Bold" Margin="0,0,0,10"/>
+
+            <!-- 👇 CAMBIO: StackPanel del total con subtotal y descuento -->
+            <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,0,0">
+
+                <!-- Subtotal antes del descuento -->
+                <TextBlock x:Name="lblSubtotal"
+                           Text="Subtotal: $0.00"
+                           FontSize="16"
+                           Foreground="#7F8C8D"/>
+
+                <!-- 👈 NUEVO: Descuento, oculto hasta que haya promoción -->
+                <TextBlock x:Name="lblDescuento"
+                           Text=""
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="Green"
+                           Visibility="Collapsed"/>
+
+                <!-- Total final -->
+                <TextBlock x:Name="lblTotal"
+                           Text="TOTAL: $0.00"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="#2C3E50"/>
+
+                <Button x:Name="btnFinalizar" Content="FINALIZAR VENTA"
+                        Height="50" Width="200"
+                        Background="#E67E22" Foreground="White"
+                        FontWeight="Bold" Click="btnFinalizar_Click"/>
+            </StackPanel>
+
+            <DataGrid x:Name="dgCarrito" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID"       Binding="{Binding Id}"                    Width="50"/>
+                    <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}"                Width="*"/>
+                    <DataGridTextColumn Header="Precio"   Binding="{Binding Precio,   StringFormat=C}"/>
+                    <DataGridTextColumn Header="Cant"     Binding="{Binding Cant}"/>
+                    <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat=C}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </Grid>
+</Page>
