@@ -54,11 +54,8 @@ namespace App_Farmacia
             }
         }
 
-        // Este es el evento que llama al TextBox
         private void BtnBuscar_Click(object sender, RoutedEventArgs e)
         {
-            // Si txtBuscarCliente sigue en rojo, dale "Guardar todo" (Ctrl+Shift+S)
-            // para que Visual Studio refresque el archivo autogenerado.
             dgHistorial.ItemsSource = null;
             CargarClientes(txtBuscarCliente.Text);
         }
@@ -69,6 +66,30 @@ namespace App_Farmacia
             {
                 MessageBox.Show("Faltan datos obligatorios.");
                 return;
+            }
+
+            // VALIDACIÓN DE NIT DUPLICADO
+            using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+            {
+                try
+                {
+                    con.Open();
+                    string sqlCheck = "SELECT COUNT(*) FROM Cliente WHERE NroDocumento = @NroDocumento";
+                    SqlCommand cmdCheck = new SqlCommand(sqlCheck, con);
+                    cmdCheck.Parameters.AddWithValue("@NroDocumento", txtDocumento.Text.Trim());
+
+                    int existe = (int)cmdCheck.ExecuteScalar();
+                    if (existe > 0)
+                    {
+                        MessageBox.Show("Ya existe un cliente con ese número de documento.");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al verificar documento: " + ex.Message);
+                    return;
+                }
             }
 
             using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
@@ -99,10 +120,8 @@ namespace App_Farmacia
 
         private void dgClientes_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Usamos ?. para evitar errores si la selección es nula al momento de buscar
             if (dgClientes.SelectedItem is DataRowView filaSeleccionada)
             {
-                // El nombre entre comillas debe ser EXACTO al de la vista vw_verClientes
                 string documento = filaSeleccionada["NroDocumento"].ToString();
                 CargarHistorialPorCliente(documento);
             }
@@ -114,7 +133,6 @@ namespace App_Farmacia
             {
                 try
                 {
-                    // Filtramos la vista 'HistorialDeCompras' por 'ClienteDocumento'
                     string sql = "SELECT Fecha, Total, Sucursal FROM vw_HistorialDeCompras WHERE ClienteDocumento = @dni";
 
                     SqlCommand cmd = new SqlCommand(sql, con);

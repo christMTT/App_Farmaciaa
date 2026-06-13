@@ -23,19 +23,18 @@ namespace App_Farmacia
         {
             InitializeComponent();
             CargarTabla();
-            CargarCategorias(); // Cargamos las categorías al iniciar
+            CargarCategorias();
         }
 
-        // 1. CARGAR CATEGORÍAS EN EL COMBOBOX
         private void CargarCategorias()
         {
             using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
             {
                 try
                 {
-                    // Ajusta el nombre de la tabla/columnas si son distintos en tu BD
-                    string sql = "SELECT ID_Categoria, Nombre FROM Categoria";
-                    SqlDataAdapter da = new SqlDataAdapter(sql, con);
+                    SqlCommand cmd = new SqlCommand("SELECT ID_Categoria, Nombre FROM Categoria", con);
+                    cmd.CommandTimeout = 120;
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
 
@@ -56,6 +55,7 @@ namespace App_Farmacia
                 {
                     SqlCommand cmd = new SqlCommand("sp_BuscarProducto", con);
                     cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandTimeout = 120;
                     cmd.Parameters.AddWithValue("@nombre", nombre);
                     cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
 
@@ -76,7 +76,6 @@ namespace App_Farmacia
             CargarTabla(txtBusqueda.Text);
         }
 
-        // 2. CREAR PRODUCTO (ACTUALIZADO CON CATEGORÍA)
         private void BtnCrear_Click(object sender, RoutedEventArgs e)
         {
             if (cbCategoria.SelectedValue == null)
@@ -85,25 +84,54 @@ namespace App_Farmacia
                 return;
             }
 
+            if (!int.TryParse(txtCantidad.Text, out int cantidad) || cantidad < 0)
+            {
+                MessageBox.Show("Ingrese una cantidad válida (mayor o igual a 0).");
+                return;
+            }
+
             try
             {
                 using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
                 {
                     con.Open();
+
+                    // Verificar si ya existe un producto con mismo nombre Y presentación
+                    SqlCommand cmdVerificar = new SqlCommand(
+                        "SELECT COUNT(*) FROM Producto WHERE Nombre = @Nombre AND Presentacion = @Presentacion", con);
+                    cmdVerificar.Parameters.AddWithValue("@Nombre", txtNombre.Text);
+                    cmdVerificar.Parameters.AddWithValue("@Presentacion", txtPresentacion.Text);
+                    cmdVerificar.CommandTimeout = 120;
+
+                    int existe = (int)cmdVerificar.ExecuteScalar();
+
+                    if (existe > 0)
+                    {
+                        MessageBox.Show("Ya existe un producto con ese nombre y presentación. Use 'Añadir a existente' para reabastecer stock.");
+                        return;
+                    }
+
                     SqlCommand cmd = new SqlCommand("sp_CrearProducto", con);
                     cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandTimeout = 120;
 
                     cmd.Parameters.AddWithValue("@Nombre", txtNombre.Text);
                     cmd.Parameters.AddWithValue("@Presentacion", txtPresentacion.Text);
                     cmd.Parameters.AddWithValue("@Precio", decimal.Parse(txtPrecio.Text));
-                    cmd.Parameters.AddWithValue("@Stock", int.Parse(txtCantidad.Text));
+                    cmd.Parameters.AddWithValue("@Stock", cantidad);
                     cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
-
-                    // PASAMOS EL ID DE LA CATEGORÍA SELECCIONADA
                     cmd.Parameters.AddWithValue("@idCategoria", cbCategoria.SelectedValue);
 
                     cmd.ExecuteNonQuery();
                     MessageBox.Show("Producto creado y asignado a sucursal.");
+
+                    _ = Datos.Auditoria.Instancia.RegistrarEdicionAsync(
+                        entidad: "Producto",
+                        entidadId: 0,
+                        campo: "creacion",
+                        valorAnterior: null,
+                        valorNuevo: txtNombre.Text + " - " + txtPresentacion.Text
+                    );
 
                     CargarTabla();
                     LimpiarCampos();
@@ -119,6 +147,12 @@ namespace App_Farmacia
         {
             if (idSeleccionado == 0) { MessageBox.Show("Seleccione un producto de la tabla"); return; }
 
+            if (!int.TryParse(txtCantidad.Text, out int cantidad) || cantidad < 0)
+            {
+                MessageBox.Show("Ingrese una cantidad válida (mayor o igual a 0).");
+                return;
+            }
+
             try
             {
                 using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
@@ -126,14 +160,24 @@ namespace App_Farmacia
                     con.Open();
                     SqlCommand cmd = new SqlCommand("sp_ActualizarStock", con);
                     cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandTimeout = 120;
 
                     cmd.Parameters.AddWithValue("@idProducto", idSeleccionado);
                     cmd.Parameters.AddWithValue("@Nombre", txtNombre.Text);
-                    cmd.Parameters.AddWithValue("@NuevaCantidad", int.Parse(txtCantidad.Text));
+                    cmd.Parameters.AddWithValue("@NuevaCantidad", cantidad);
                     cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
 
                     cmd.ExecuteNonQuery();
                     MessageBox.Show("Stock actualizado exitosamente.");
+
+                    _ = Datos.Auditoria.Instancia.RegistrarEdicionAsync(
+                        entidad: "Producto",
+                        entidadId: idSeleccionado,
+                        campo: "stock",
+                        valorAnterior: null,
+                        valorNuevo: cantidad
+                    );
+
                     CargarTabla();
                 }
             }
@@ -150,7 +194,7 @@ namespace App_Farmacia
                 idSeleccionado = (int)fila["ID_Producto"];
                 txtNombre.Text = fila["Nombre"].ToString();
                 txtPrecio.Text = fila["Precio"].ToString();
-                // Opcional: Si la vista devuelve ID_Categoria, puedes seleccionarlo en el combo
+                txtPresentacion.Text = fila["Presentacion"].ToString();
             }
         }
 
@@ -161,7 +205,7 @@ namespace App_Farmacia
             txtPresentacion.Clear();
             txtPrecio.Text = "0.00";
             txtCantidad.Text = "0";
-            cbCategoria.SelectedIndex = -1; // Limpia la selección del combo
+            cbCategoria.SelectedIndex = -1;
         }
     }
 }

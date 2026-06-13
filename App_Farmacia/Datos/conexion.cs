@@ -37,5 +37,6 @@
                     };
                 }
             }
-        }
+        public static string CadenaMongo =>ConfigurationManager.AppSettings["MongoConexion"];
+    }
     }

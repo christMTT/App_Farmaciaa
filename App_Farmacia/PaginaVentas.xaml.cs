@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 using System.Data;
-using Microsoft.Data.SqlClient;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,7 +16,6 @@ using System.Windows.Shapes;
 
 namespace App_Farmacia
 {
-    // Clase para representar los productos en el carrito
     public class ElementoCarrito
     {
         public int Id { get; set; }
@@ -29,9 +29,10 @@ namespace App_Farmacia
     {
         private List<ElementoCarrito> carrito = new List<ElementoCarrito>();
         private decimal total = 0;
-        private decimal descuento = 0;         // 👈 NUEVO
-        private decimal totalConDescuento = 0; // 👈 NUEVO
+        private decimal descuento = 0;
+        private decimal totalConDescuento = 0;
         private int idClienteSeleccionado = 11;
+        private bool _ventaConReceta = false;
 
         public PaginaVentas()
         {
@@ -120,6 +121,43 @@ namespace App_Farmacia
                     return;
                 }
 
+                // VALIDACIÓN DE STOCK DISPONIBLE
+                int stockDisponible = 0;
+                using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
+                {
+                    try
+                    {
+                        con.Open();
+                        string sql = "SELECT Stock FROM ProductoSucursales WHERE ID_Producto = @idProducto AND ID_Sucursal = @idSucursal";
+                        SqlCommand cmd = new SqlCommand(sql, con);
+                        cmd.Parameters.AddWithValue("@idProducto", (int)fila["ID_Producto"]);
+                        cmd.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
+
+                        object resultado = cmd.ExecuteScalar();
+                        stockDisponible = resultado != null ? Convert.ToInt32(resultado) : 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error al verificar stock: " + ex.Message);
+                        return;
+                    }
+                }
+
+                // Considerar también lo que ya está en el carrito para ese producto
+                int cantidadEnCarrito = 0;
+                foreach (var c in carrito)
+                {
+                    if (c.Id == (int)fila["ID_Producto"])
+                        cantidadEnCarrito += c.Cant;
+                }
+
+                if (cantidad + cantidadEnCarrito > stockDisponible)
+                {
+                    MessageBox.Show($"Stock insuficiente. Solo hay {stockDisponible} unidades disponibles" +
+                        (cantidadEnCarrito > 0 ? $" y ya tiene {cantidadEnCarrito} en el carrito." : "."));
+                    return;
+                }
+
                 var item = new ElementoCarrito
                 {
                     Id = (int)fila["ID_Producto"],
@@ -144,7 +182,6 @@ namespace App_Farmacia
 
         private void AplicarDescuento()
         {
-            // Si el carrito está vacío no hay nada que descontar
             if (total == 0)
             {
                 descuento = 0;
@@ -167,7 +204,6 @@ namespace App_Farmacia
 
                     if (r.Read())
                     {
-                        // Hay promoción activa
                         descuento = r.GetDecimal(r.GetOrdinal("MontoDescuento"));
                         totalConDescuento = total - descuento;
 
@@ -176,7 +212,6 @@ namespace App_Farmacia
                     }
                     else
                     {
-                        // Sin promoción activa
                         descuento = 0;
                         totalConDescuento = total;
                         lblDescuento.Visibility = Visibility.Collapsed;
@@ -187,7 +222,6 @@ namespace App_Farmacia
                 }
                 catch (Exception ex)
                 {
-                    // Si falla el descuento, seguimos con el total normal
                     descuento = 0;
                     totalConDescuento = total;
                     lblSubtotal.Text = $"Subtotal: {total:C}";
@@ -198,20 +232,29 @@ namespace App_Farmacia
             }
         }
 
-        // ================================
-        // ACTUALIZAR INTERFAZ
-        // ================================
-
         private void ActualizarInterfaz()
         {
             dgCarrito.Items.Refresh();
             lblSubtotal.Text = $"Subtotal: {total:C}";
-            AplicarDescuento(); // Recalcula el descuento cada vez que cambia el carrito
+            AplicarDescuento();
         }
 
-        // ================================
-        // FINALIZAR VENTA
-        // ================================
+        private void btnReceta_Click(object sender, RoutedEventArgs e)
+        {
+            _ventaConReceta = !_ventaConReceta;
+
+            if (_ventaConReceta)
+            {
+                btnReceta.Content = "✓ Con receta";
+                btnReceta.Background = new SolidColorBrush(
+                    (Color)ColorConverter.ConvertFromString("#FAEEDA"));
+            }
+            else
+            {
+                btnReceta.Content = "Venta con receta";
+                btnReceta.Background = Brushes.Transparent;
+            }
+        }
 
         private void btnFinalizar_Click(object sender, RoutedEventArgs e)
         {
@@ -228,22 +271,19 @@ namespace App_Farmacia
 
                 try
                 {
-                    // 1. Insertar Factura
                     SqlCommand cmdF = new SqlCommand("sp_InsertarFactura", con, tra);
                     cmdF.CommandType = CommandType.StoredProcedure;
 
                     cmdF.Parameters.AddWithValue("@idCliente", idClienteSeleccionado);
                     cmdF.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
                     cmdF.Parameters.AddWithValue("@idUsuario", Sesion.IdUsuario);
-                    cmdF.Parameters.AddWithValue("@total", totalConDescuento); // 👈 CAMBIADO
+                    cmdF.Parameters.AddWithValue("@total", totalConDescuento);
                     cmdF.ExecuteNonQuery();
 
-                    // 2. Recuperar ID de la factura recién creada
                     SqlCommand cmdId = new SqlCommand(
                         "SELECT TOP 1 ID_Factura FROM Factura ORDER BY ID_Factura DESC", con, tra);
                     int idFactura = (int)cmdId.ExecuteScalar();
 
-                    // 3. Insertar Detalles
                     foreach (var item in carrito)
                     {
                         SqlCommand cmdD = new SqlCommand("sp_InsertarDetalleFactura", con, tra);
@@ -260,11 +300,35 @@ namespace App_Farmacia
 
                     tra.Commit();
 
-                    // Mensaje con resumen de la venta
+                    if (_ventaConReceta)
+                    {
+                        var productosReceta = new BsonArray();
+                        foreach (var item in carrito)
+                        {
+                            productosReceta.Add(new BsonDocument
+                            {
+                                ["producto_id"] = item.Id,
+                                ["producto_nombre"] = item.Nombre,
+                                ["cantidad"] = item.Cant,
+                                ["precio_unit"] = (double)item.Precio
+                            });
+                        }
+
+                        _ = Datos.Auditoria.Instancia.RegistrarRecetaAsync(
+                            factura_id: idFactura,
+                            productos: productosReceta
+                        );
+                    }
+
                     if (descuento > 0)
                         MessageBox.Show($"Venta guardada.\nDescuento aplicado: {descuento:C}\nTotal cobrado: {totalConDescuento:C}");
                     else
                         MessageBox.Show("Venta guardada con éxito.");
+
+                    _ventaConReceta = false;
+                    btnReceta.Content = "Venta con receta";
+                    btnReceta.Background = Brushes.Transparent;
+
 
                     LimpiarVenta();
                 }
@@ -284,8 +348,8 @@ namespace App_Farmacia
         {
             carrito.Clear();
             total = 0;
-            descuento = 0;  // 👈 NUEVO
-            totalConDescuento = 0;  // 👈 NUEVO
+            descuento = 0;
+            totalConDescuento = 0;
             idClienteSeleccionado = 1;
 
             txtDniCliente.Clear();
@@ -294,7 +358,7 @@ namespace App_Farmacia
 
             lblNombreCliente.Text = "Cliente: Público General";
             lblNombreCliente.Foreground = Brushes.Gray;
-            lblDescuento.Visibility = Visibility.Collapsed; // 👈 NUEVO
+            lblDescuento.Visibility = Visibility.Collapsed;
 
             ActualizarInterfaz();
         }
