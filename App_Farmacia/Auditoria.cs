@@ -50,7 +50,7 @@ namespace App_Farmacia.Datos
             }
         }
 
-        public async Task RegistrarRecetaAsync( int facturaId, BsonArray productos)
+        public async Task RegistrarRecetaAsync( int facturaId, BsonArray productos, string nDoc, string direccion)
         {
             try
             {
@@ -61,6 +61,8 @@ namespace App_Farmacia.Datos
                     ["usuario_id"] = Sesion.IdUsuario,
                     ["usuario_nombre"] = Sesion.NombreUsuario ?? "desconocido",
                     ["sucursal_id"] = Sesion.IdSucursal,
+                    ["nombreDoctor"] = nDoc,
+                    ["direccionReceta"]=direccion,
                     ["detalle"] = new BsonDocument
                     {
                         ["factura_id"] = facturaId,

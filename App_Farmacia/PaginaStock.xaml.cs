@@ -96,7 +96,6 @@ namespace App_Farmacia
                 {
                     con.Open();
 
-                    // Verificar si ya existe un producto con mismo nombre Y presentación
                     SqlCommand cmdVerificar = new SqlCommand(
                         "SELECT COUNT(*) FROM Producto WHERE Nombre = @Nombre AND Presentacion = @Presentacion", con);
                     cmdVerificar.Parameters.AddWithValue("@Nombre", txtNombre.Text);
@@ -128,7 +127,7 @@ namespace App_Farmacia
                     _ = Datos.Auditoria.Instancia.RegistrarEdicionAsync(
                         entidad: "Producto",
                         entidadId: 0,
-                        campo: "creacion",
+                        campo: "crear producto",
                         valorNuevo: txtNombre.Text + " - " + txtPresentacion.Text
                     );
 
@@ -172,7 +171,7 @@ namespace App_Farmacia
                     _ = Datos.Auditoria.Instancia.RegistrarEdicionAsync(
                         entidad: "Producto",
                         entidadId: idSeleccionado,
-                        campo: "stock",
+                        campo: " aumento stock",
                         valorNuevo: cantidad
                     );
 

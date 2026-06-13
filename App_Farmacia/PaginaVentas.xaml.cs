@@ -248,11 +248,18 @@ namespace App_Farmacia
                 btnReceta.Content = "✓ Con receta";
                 btnReceta.Background = new SolidColorBrush(
                     (Color)ColorConverter.ConvertFromString("#FAEEDA"));
+
+                panelReceta.Visibility = Visibility.Visible;
             }
             else
             {
                 btnReceta.Content = "Venta con receta";
                 btnReceta.Background = Brushes.Transparent;
+
+                panelReceta.Visibility = Visibility.Collapsed;
+
+                txtDoctor.Clear();
+                txtConsultorio.Clear();
             }
         }
 
@@ -278,9 +285,7 @@ namespace App_Farmacia
                     cmdF.Parameters.AddWithValue("@total", totalConDescuento);
                     cmdF.ExecuteNonQuery();
 
-                    SqlCommand cmdId = new SqlCommand(
-                        "SELECT TOP 1 ID_Factura FROM Factura ORDER BY ID_Factura DESC", con);
-                    idFactura = (int)cmdId.ExecuteScalar();
+                    idFactura = Convert.ToInt32(cmdF.ExecuteScalar());
 
                     foreach (var item in carrito)
                     {
@@ -304,7 +309,6 @@ namespace App_Farmacia
 
             if (!ventaExitosa) return;
 
-            // MongoDB — fuera del using de SQL
             if (_ventaConReceta)
             {
                 var productosReceta = new BsonArray();
@@ -319,10 +323,7 @@ namespace App_Farmacia
                     });
                 }
 
-                await Datos.Auditoria.Instancia.RegistrarRecetaAsync(
-                    facturaId: idFactura,
-                    productos: productosReceta
-                );
+                await Datos.Auditoria.Instancia.RegistrarRecetaAsync( idFactura, productosReceta,txtDoctor.Text, txtConsultorio.Text);
             }
 
             if (descuento > 0)
@@ -345,9 +346,12 @@ namespace App_Farmacia
             totalConDescuento = 0;
             idClienteSeleccionado = 1;
 
+            txtDoctor.Clear();
             txtDniCliente.Clear();
             txtBusqueda.Clear();
             txtCantidad.Text = "1";
+            txtConsultorio.Clear();
+      
 
             lblNombreCliente.Text = "Cliente: Público General";
             lblNombreCliente.Foreground = Brushes.Gray;
