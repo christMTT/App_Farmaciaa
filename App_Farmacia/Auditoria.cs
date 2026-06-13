@@ -20,12 +20,11 @@ namespace App_Farmacia.Datos
             var db = client.GetDatabase("Farmacia_Audit");
             _logs = db.GetCollection<BsonDocument>("Registros");
 
-            // sintaxis correcta
             var ping = db.RunCommand<BsonDocument>(new BsonDocument("ping", 1));
             System.Diagnostics.Debug.WriteLine("Conexión confirmada: " + ping.ToString());
         }
 
-        public async Task RegistrarEdicionAsync(string entidad, int entidadId, string campo, object valorAnterior, object valorNuevo)
+        public async Task RegistrarEdicionAsync(string entidad, int entidadId, string campo, object valorNuevo)
         {
             try
             {
@@ -41,7 +40,6 @@ namespace App_Farmacia.Datos
                         ["entidad"] = entidad,
                         ["entidad_id"] = entidadId,
                         ["campo"] = campo,
-                        ["valor_anterior"] = BsonValue.Create(valorAnterior),
                         ["valor_nuevo"] = BsonValue.Create(valorNuevo)
                     }
                 });
@@ -72,7 +70,6 @@ namespace App_Farmacia.Datos
             }
             catch (Exception ex)
             {
-                // temporal — muestra el error real en pantalla
                 MessageBox.Show("Error MongoDB: " + ex.Message);
                 System.Diagnostics.Debug.WriteLine($"Log receta falló: {ex.Message}");
             }

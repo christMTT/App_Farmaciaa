@@ -129,7 +129,6 @@ namespace App_Farmacia
                         entidad: "Producto",
                         entidadId: 0,
                         campo: "creacion",
-                        valorAnterior: null,
                         valorNuevo: txtNombre.Text + " - " + txtPresentacion.Text
                     );
 
@@ -174,7 +173,6 @@ namespace App_Farmacia
                         entidad: "Producto",
                         entidadId: idSeleccionado,
                         campo: "stock",
-                        valorAnterior: null,
                         valorNuevo: cantidad
                     );
 
