@@ -39,7 +39,7 @@ namespace App_Farmacia
             InitializeComponent();
             dgCarrito.ItemsSource = carrito;
         }
-
+            
         // ================================
         // LÓGICA DE CLIENTE
         // ================================
@@ -256,24 +256,22 @@ namespace App_Farmacia
             }
         }
 
-        private void btnFinalizar_Click(object sender, RoutedEventArgs e)
+        private async void btnFinalizar_Click(object sender, RoutedEventArgs e)
         {
-            if (carrito.Count == 0)
-            {
-                MessageBox.Show("El carrito está vacío.");
-                return;
-            }
+            if (carrito.Count == 0) { MessageBox.Show("El carrito está vacío."); return; }
+
+            var itemsParaAuditoria = new List<ElementoCarrito>(carrito);
+            int idFactura = 0;
+            bool ventaExitosa = false;
 
             using (SqlConnection con = new SqlConnection(Datos.conexion.Cadena))
             {
                 con.Open();
-                SqlTransaction tra = con.BeginTransaction();
-
                 try
                 {
-                    SqlCommand cmdF = new SqlCommand("sp_InsertarFactura", con, tra);
+                    // sin BeginTransaction — el SP ya maneja la suya
+                    SqlCommand cmdF = new SqlCommand("sp_InsertarFactura", con);
                     cmdF.CommandType = CommandType.StoredProcedure;
-
                     cmdF.Parameters.AddWithValue("@idCliente", idClienteSeleccionado);
                     cmdF.Parameters.AddWithValue("@idSucursal", Sesion.IdSucursal);
                     cmdF.Parameters.AddWithValue("@idUsuario", Sesion.IdUsuario);
@@ -281,68 +279,63 @@ namespace App_Farmacia
                     cmdF.ExecuteNonQuery();
 
                     SqlCommand cmdId = new SqlCommand(
-                        "SELECT TOP 1 ID_Factura FROM Factura ORDER BY ID_Factura DESC", con, tra);
-                    int idFactura = (int)cmdId.ExecuteScalar();
+                        "SELECT TOP 1 ID_Factura FROM Factura ORDER BY ID_Factura DESC", con);
+                    idFactura = (int)cmdId.ExecuteScalar();
 
                     foreach (var item in carrito)
                     {
-                        SqlCommand cmdD = new SqlCommand("sp_InsertarDetalleFactura", con, tra);
+                        SqlCommand cmdD = new SqlCommand("sp_InsertarDetalleFactura", con);
                         cmdD.CommandType = CommandType.StoredProcedure;
-
                         cmdD.Parameters.AddWithValue("@subtotal", item.Subtotal);
                         cmdD.Parameters.AddWithValue("@cantidad", item.Cant);
                         cmdD.Parameters.AddWithValue("@PrecioUnit", item.Precio);
                         cmdD.Parameters.AddWithValue("@idFactura", idFactura);
                         cmdD.Parameters.AddWithValue("@idProducto", item.Id);
-
                         cmdD.ExecuteNonQuery();
                     }
 
-                    tra.Commit();
-
-                    if (_ventaConReceta)
-                    {
-                        var productosReceta = new BsonArray();
-                        foreach (var item in carrito)
-                        {
-                            productosReceta.Add(new BsonDocument
-                            {
-                                ["producto_id"] = item.Id,
-                                ["producto_nombre"] = item.Nombre,
-                                ["cantidad"] = item.Cant,
-                                ["precio_unit"] = (double)item.Precio
-                            });
-                        }
-
-                        _ = Datos.Auditoria.Instancia.RegistrarRecetaAsync(
-                            factura_id: idFactura,
-                            productos: productosReceta
-                        );
-                    }
-
-                    if (descuento > 0)
-                        MessageBox.Show($"Venta guardada.\nDescuento aplicado: {descuento:C}\nTotal cobrado: {totalConDescuento:C}");
-                    else
-                        MessageBox.Show("Venta guardada con éxito.");
-
-                    _ventaConReceta = false;
-                    btnReceta.Content = "Venta con receta";
-                    btnReceta.Background = Brushes.Transparent;
-
-
-                    LimpiarVenta();
+                    ventaExitosa = true;
                 }
                 catch (Exception ex)
                 {
-                    tra.Rollback();
                     MessageBox.Show("Error al finalizar venta: " + ex.Message);
                 }
             }
+
+            if (!ventaExitosa) return;
+
+            // MongoDB — fuera del using de SQL
+            if (_ventaConReceta)
+            {
+                var productosReceta = new BsonArray();
+                foreach (var item in itemsParaAuditoria)
+                {
+                    productosReceta.Add(new BsonDocument
+                    {
+                        ["producto_id"] = item.Id,
+                        ["producto_nombre"] = item.Nombre,
+                        ["cantidad"] = item.Cant,
+                        ["precio_unit"] = (double)item.Precio
+                    });
+                }
+
+                await Datos.Auditoria.Instancia.RegistrarRecetaAsync(
+                    facturaId: idFactura,
+                    productos: productosReceta
+                );
+            }
+
+            if (descuento > 0)
+                MessageBox.Show($"Venta guardada.\nDescuento: {descuento:C}\nTotal: {totalConDescuento:C}");
+            else
+                MessageBox.Show("Venta guardada con éxito.");
+
+            _ventaConReceta = false;
+            btnReceta.Content = "Venta con receta";
+            btnReceta.Background = Brushes.Transparent;
+            LimpiarVenta();
         }
 
-        // ================================
-        // LIMPIAR VENTA
-        // ================================
 
         private void LimpiarVenta()
         {

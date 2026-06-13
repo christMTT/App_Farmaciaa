@@ -79,12 +79,10 @@
                                Foreground="#2C3E50"/>
                 </StackPanel>
 
-                <!-- Botones en fila -->
                 <StackPanel Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
                             Margin="0,10,0,0">
 
-                    <!-- BOTÓN RECETA — nuevo -->
                     <Button x:Name="btnReceta"
                             Content="Venta con receta"
                             Height="30"
